@@ -318,9 +318,6 @@ namespace UnityEditor.Rendering.Universal
             if (!SaveCurrentSceneAndContinue())
                 return;
 
-            bool isDeepSearchEnabled = Search.SearchService.IsDeepIndexingEnabled();
-            bool isPackageIndexingEnabled = Search.SearchService.IsPackageIndexingEnabled();
-
             // Gather all the converters that are selected
             var selectedConverters = new List<RenderPipelineConverterVisualElement>();
             foreach (var converterVE in m_VEList)
@@ -345,21 +342,8 @@ namespace UnityEditor.Rendering.Universal
                 // Check if all the converters did finish
                 if (iConverterIndex >= count)
                 {
-                    if (isDeepSearchEnabled != Search.SearchService.IsDeepIndexingEnabled() ||
-                        isPackageIndexingEnabled != Search.SearchService.IsPackageIndexingEnabled())
-                    {
-                        // Rollback the index settings, and call the callback to notify that the initialization is done
-                        Search.SearchService.ChangeIndexingSettings(
-                            deepIndexing: isDeepSearchEnabled,
-                            packageIndexing: isPackageIndexingEnabled,
-                            InitializationFinish);
-                    }
-                    else
-                    {
-                        // No need to rollback the index info, the initialization is done now
-                        InitializationFinish();
-                    }
-
+                    // No need to rollback the index info, the initialization is done now
+                    InitializationFinish();
                     return;
                 }
 
@@ -383,28 +367,8 @@ namespace UnityEditor.Rendering.Universal
                 current.Scan(OnConverterScanFinished);
             }
 
-            void OnSearchIndexReady()
-            {
-                ProcessNextConverter();
-            }
-
-            bool needsDeepSearch = ShouldCreateSearchIndex();
-            bool needsPackageIndexing = false;
-
-            if (isDeepSearchEnabled != needsDeepSearch || isPackageIndexingEnabled != needsPackageIndexing)
-            {
-                EditorUtility.DisplayProgressBar("Initializing converters", $"Modifying {name} search index", -1f);
-                Search.SearchService.ChangeIndexingSettings(
-                    deepIndexing: needsDeepSearch,
-                    packageIndexing: false,
-                    OnSearchIndexReady
-                );
-            }
-            else
-            {
-                // The search index is already set up for our needs, no need to configure anything
-                OnSearchIndexReady();
-            }
+            // Indexing is now continuous in Unity 6, no need to change settings
+            ProcessNextConverter();
         }
 
         private void RefreshUI()

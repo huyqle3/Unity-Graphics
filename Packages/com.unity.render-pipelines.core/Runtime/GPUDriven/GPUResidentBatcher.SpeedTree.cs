@@ -68,19 +68,19 @@ namespace UnityEngine.Rendering
         {
             if (treeRendererIDs.Length == 0)
                 return;
-
+        
             Assert.AreEqual(treeRendererIDs.Length, treeInstances.Length);
             Assert.AreEqual(m_BatchersContext.renderersParameters.windParams.Length, (int)SpeedTreeWindParamIndex.MaxWindParamsCount);
-
+        
             var gpuInstanceIndices = new NativeArray<GPUInstanceIndex>(treeInstances.Length, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             m_BatchersContext.instanceDataBuffer.CPUInstanceArrayToGPUInstanceArray(treeInstances, gpuInstanceIndices);
-
+        
             if (!history)
                 m_BatchersContext.UpdateInstanceWindDataHistory(gpuInstanceIndices);
-
+        
             GPUInstanceDataBufferUploader uploader = m_BatchersContext.CreateDataBufferUploader(treeInstances.Length, InstanceType.SpeedTree);
             uploader.AllocateUploadHandles(treeInstances.Length);
-
+        
             var windParams = new SpeedTreeWindParamsBufferIterator();
             windParams.bufferPtr = uploader.GetUploadBufferPtr();
             for (int i = 0; i < (int)SpeedTreeWindParamIndex.MaxWindParamsCount; ++i)
@@ -88,10 +88,16 @@ namespace UnityEngine.Rendering
             windParams.uintStride = uploader.GetUIntPerInstance();
             windParams.elementOffset = 0;
             windParams.elementsCount = treeInstances.Length;
-
-            SpeedTreeWindManager.UpdateWindAndWriteBufferWindParams(treeRendererIDs, windParams, history);
+        
+            // Convert NativeArray<int> to EntityId[] for 6000.4 API compatibility
+            var entityIds = new EntityId[treeRendererIDs.Length];
+            for (int i = 0; i < treeRendererIDs.Length; i++)
+                entityIds[i] = new EntityId(treeRendererIDs[i]);
+        
+            SpeedTreeWindManager.UpdateWindAndWriteBufferWindParams(new ReadOnlySpan<EntityId>(entityIds), windParams, history);
+        
             m_BatchersContext.SubmitToGpu(gpuInstanceIndices, ref uploader, submitOnlyWrittenParams: true);
-
+        
             gpuInstanceIndices.Dispose();
             uploader.Dispose();
         }

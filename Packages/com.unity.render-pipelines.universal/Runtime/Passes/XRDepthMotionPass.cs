@@ -15,7 +15,6 @@ namespace UnityEngine.Rendering.Universal
         private static readonly int k_SpaceWarpNDCModifier = Shader.PropertyToID("_SpaceWarpNDCModifier");
         private static readonly int k_XRDepthTextureNameID = Shader.PropertyToID("_XRDepthTexture");
         private static readonly int k_XRDepthTextureScaleBiasNameID = Shader.PropertyToID("_XRDepthTexture_ST");
-        private static LocalKeyword m_SubsampleDepthKeyword;
         private static GlobalKeyword m_ApplicationSpaceWarpMotionKeyword;
         private PassData m_PassData;
         private RTHandle m_XRMotionVectorColor;
@@ -40,7 +39,6 @@ namespace UnityEngine.Rendering.Universal
             m_XRMotionVectorColor = null;
             xrMotionVectorDepth = TextureHandle.nullHandle;
             m_XRMotionVectorDepth = null;
-            m_SubsampleDepthKeyword = new LocalKeyword(xrMotionVector, "_SUBSAMPLE_DEPTH");
             m_ApplicationSpaceWarpMotionKeyword = GlobalKeyword.Create("APPLICATION_SPACE_WARP_MOTION");
         }
 
@@ -55,8 +53,6 @@ namespace UnityEngine.Rendering.Universal
             internal bool hasValidXRDepth;
             internal TextureHandle xrDepthSrc;
             internal UniversalCameraData cameraData;
-            internal bool requiresSubsampleDepth;
-            internal LocalKeyword subsampleDepthKeyword;
         }
 
         ///  View projection data
@@ -170,10 +166,6 @@ namespace UnityEngine.Rendering.Universal
             {
                 // backBufferDepth(eyeTexture depth) has valid data to read from
                 m_PassData.hasValidXRDepth = true;
-
-                // Subsample Depth if the motion vector render target is smaller than the color render target
-                bool subsampleDepth = cameraData.xr.motionVectorRenderTargetDesc.width < cameraData.xr.renderTargetDesc.width;
-                m_PassData.requiresSubsampleDepth = subsampleDepth;
             }
 
             using (new ProfilingScope(renderingData.commandBuffer, profilingSampler))
@@ -367,10 +359,6 @@ namespace UnityEngine.Rendering.Universal
                     builder.UseTexture(resourceData.backBufferDepth, AccessFlags.Read);
                     passData.xrDepthSrc = resourceData.backBufferDepth;
                     passData.hasValidXRDepth = true;
-
-                    // Subsample Depth if the motion vector render target is smaller than the color render target
-                    bool subsampleDepth = cameraData.xr.motionVectorRenderTargetDesc.width < cameraData.xr.renderTargetDesc.width;
-                    passData.requiresSubsampleDepth = subsampleDepth;
                 }
 
                 builder.SetRenderFunc((PassData data, RasterGraphContext context) =>
@@ -402,15 +390,6 @@ namespace UnityEngine.Rendering.Universal
         // If we have valid depth data, copy the data to the motionvector depth to avoid rasterizing the static objects
         if (data.hasValidXRDepth)
         {
-            if (data.requiresSubsampleDepth)
-            {
-                data.xrMotionVector.EnableKeyword(data.subsampleDepthKeyword);
-            }
-            else
-            {
-                data.xrMotionVector.DisableKeyword(data.subsampleDepthKeyword);
-            }
-
             cmd.DrawProcedural(Matrix4x4.identity, data.xrMotionVector, shaderPass: 1, MeshTopology.Triangles, 3, 1);
         }
 

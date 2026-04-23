@@ -66,6 +66,15 @@ float3 GetLastFrameDeformedPosition(Attributes input, MotionVectorPassOutput cur
     return previousPositionOS;
 }
 
+bool IsIdentity(in float4x4 modelMatrix)
+{
+    return
+        modelMatrix[0][0] == 1.0 && modelMatrix[0][1] == 0.0 && modelMatrix[0][2] == 0.0 && modelMatrix[0][3] == 0.0 &&
+        modelMatrix[1][0] == 0.0 && modelMatrix[1][1] == 1.0 && modelMatrix[1][2] == 0.0 && modelMatrix[1][3] == 0.0 &&
+        modelMatrix[2][0] == 0.0 && modelMatrix[2][1] == 0.0 && modelMatrix[2][2] == 1.0 && modelMatrix[2][3] == 0.0 &&
+        modelMatrix[3][0] == 0.0 && modelMatrix[3][1] == 0.0 && modelMatrix[3][2] == 0.0 && modelMatrix[3][3] == 1.0;
+}
+
 // -------------------------------------
 // Vertex
 void vert(
@@ -78,6 +87,9 @@ void vert(
     MotionVectorPassVaryings mvOutput = (MotionVectorPassVaryings)0;
     MotionVectorPassOutput currentFrameMvData = (MotionVectorPassOutput)0;
     output = BuildVaryings(input, currentFrameMvData);
+#if !defined(APPLICATION_SPACE_WARP_MOTION)
+    ApplyMotionVectorZBias(output.positionCS);
+#endif
     packedOutput = PackVaryings(output);
 
 #if defined(HAVE_VFX_MODIFICATION) && !VFX_FEATURE_MOTION_VECTORS
@@ -155,6 +167,19 @@ void vert(
     #else
             mvOutput.previousPositionCSNoJitter = mul(_PrevViewProjMatrix, mul(UNITY_PREV_MATRIX_M, float4(previousPositionOS, 1.0f)));
     #endif
+#else
+        // Particle System Workaround.
+        // There is currently a bug in Unity that UNITY_PREV_MATRIX_M is relative to the particle system
+        // transform, but UNITY_MATRIX_M is always identity, causing artifacts for particles with motion vectors.
+        // We can avoid this bug by checking whether the current model matrix is the identity matrix, and if
+        // so, simply use the unaltered previous position without multiplying by UNITY_PREV_MATRIX_M.
+        float3 prevPositionWS = previousPositionOS;
+        if (!IsIdentity(UNITY_MATRIX_M))
+        {
+            prevPositionWS = mul(UNITY_PREV_MATRIX_M, float4(previousPositionOS, 1.0f)).xyz;
+        }
+
+        mvOutput.previousPositionCSNoJitter = mul(_PrevViewProjMatrix, float4(prevPositionWS, 1.0f));
 #endif
     }
 
@@ -181,7 +206,6 @@ float4 frag(
 #if defined(LOD_FADE_CROSSFADE) && USE_UNITY_CROSSFADE
     LODFadeCrossFade(input.positionCS);
 #endif
-
 
 #if defined(APPLICATION_SPACE_WARP_MOTION)
     return float4(CalcAswNdcMotionVectorFromCsPositions(mvInput.positionCSNoJitter, mvInput.previousPositionCSNoJitter), 1);

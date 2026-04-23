@@ -1572,6 +1572,16 @@ namespace UnityEngine.Rendering.Universal
                     m_XRCopyDepthPass.MsaaSamples = 1;
                     m_XRCopyDepthPass.Render(renderGraph, frameData, resourceData.backBufferDepth, resourceData.cameraDepth, bindAsCameraDepth: false, "XR Depth Copy");
                 }
+
+                // Populate XR motionVector color+depth as requested by XR provider
+                if (cameraData.xr.hasMotionVectorPass)
+                {
+                    // Update prevView and View matrices.
+                    m_XRDepthMotionPass?.Update(ref cameraData);
+
+                    // Record depthMotion pass and import XR resources into the rendergraph.
+                    m_XRDepthMotionPass?.Render(renderGraph, frameData);
+                }
             }
 #endif
 

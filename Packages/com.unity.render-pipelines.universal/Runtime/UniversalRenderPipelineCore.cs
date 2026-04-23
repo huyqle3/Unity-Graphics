@@ -884,6 +884,8 @@ namespace UnityEngine.Rendering.Universal
 #if ENABLE_VR && ENABLE_XR_MODULE
         public static readonly int previousViewProjectionNoJitterStereo = Shader.PropertyToID("_PrevViewProjMatrixStereo");
         public static readonly int viewProjectionNoJitterStereo = Shader.PropertyToID("_NonJitteredViewProjMatrixStereo");
+        public static readonly int previousViewProjectionStereoLegacy = Shader.PropertyToID("unity_StereoMatrixPrevVP");
+
 #endif
 
         public static readonly int blitTexture = Shader.PropertyToID("_BlitTexture");
@@ -1488,6 +1490,9 @@ namespace UnityEngine.Rendering.Universal
 
         /// <summary> Deprecated keyword. Use ClusterLightLoop instead. </summary>
         internal const string ForwardPlus = "_FORWARD_PLUS"; // Backward compatibility. Deprecated in 6.1.
+
+        /// <summary> Keyword used for application space warp for XR devices. </summary>
+        public const string APPLICATION_SPACE_WARP_MOTION = "APPLICATION_SPACE_WARP_MOTION";
     }
 
     public sealed partial class UniversalRenderPipeline
@@ -1604,6 +1609,10 @@ namespace UnityEngine.Rendering.Universal
                 desc.depthStencilFormat = SystemInfo.GetGraphicsFormat(DefaultFormat.DepthStencil);
                 desc.msaaSamples = msaaSamples;
                 desc.sRGB = (QualitySettings.activeColorSpace == ColorSpace.Linear);
+                // Use Memoryless MSAA buffers if resolve is supported
+                desc.memoryless = RenderingUtils.MultisampleDepthResolveSupported() ?
+                    RenderTextureMemoryless.MSAA :
+                    RenderTextureMemoryless.None;
             }
             else
             {

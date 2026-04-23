@@ -89,10 +89,10 @@ namespace UnityEngine.Rendering
             windParams.elementOffset = 0;
             windParams.elementsCount = treeInstances.Length;
         
-            // Convert NativeArray<int> to EntityId[] for 6000.4 API compatibility
+            // Convert NativeArray<int> to ReadOnlySpan<EntityId> for 6000.4 API compatibility
             var entityIds = new EntityId[treeRendererIDs.Length];
             for (int i = 0; i < treeRendererIDs.Length; i++)
-                entityIds[i] = new EntityId(treeRendererIDs[i]);
+                entityIds[i] = (EntityId)treeRendererIDs[i];
         
             SpeedTreeWindManager.UpdateWindAndWriteBufferWindParams(new ReadOnlySpan<EntityId>(entityIds), windParams, history);
         

@@ -122,6 +122,7 @@ namespace UnityEngine.Rendering.Universal
             m_DepthSource = sourceDepth;
         }
 
+#if URP_COMPATIBILITY_MODE
         /// <inheritdoc/>
         [Obsolete(DeprecationMessage.CompatibilityScriptingAPIObsolete, false)]
         public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor)
@@ -187,6 +188,7 @@ namespace UnityEngine.Rendering.Universal
                 ExecutePass(CommandBufferHelpers.GetRasterCommandBuffer(renderingData.commandBuffer), m_PassData, m_PassData.objMotionRendererList);
             }
         }
+#endif
 
         /// <summary>
         /// Initialize the RenderGraph pass data.

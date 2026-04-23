@@ -1168,7 +1168,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
                 renderStates = CoreRenderStates.MotionVector(target),
                 pragmas = CorePragmas.MotionVectors,
                 defines = new DefineCollection(),
-                keywords = new KeywordCollection() { CoreKeywordDescriptors.ApplicationSpaceWarpMotion },
+                keywords = new KeywordCollection() { CoreKeywordDescriptors.XRMotionVectors },
                 includes = CoreIncludes.MotionVectors,
 
                 // Custom Interpolator Support
